@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang=ru dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>{{.Title}}</title>
+  </head>
+  <style type="text/css">
+    *{
+      margin:0; padding:0;
+    }
+    .topMenu{
+      padding:0.5em;
+      background-color: darkslateblue;
+      color: white;
+      box-shadow:0 0 2px 1px rgb(0,0,0,0.4);
+    }
+  </style>
+  <body>
+    <div class="topMenu">
+      Главное меню
+    </div>
+    <form  id="fileUpload"  enctype="multipart/form-data" method="post">
+      <input type="file" name="fileUpload">
+      <input type="submit" name="sent" value="sent">
+    </form>
+  </body>
+  <script type="text/javascript">
+      let formUpload = document.getElementById("fileUpload")
+      formUpload.elements.sent.onclick = function(){
+        let fileData = formUpload.elements.fileUpload.files[0];
+        console.log(fileData);
+        let formdata = new FormData();
+        formdata.append('fileUpload', fileData);
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', 'http://192.168.0.104:8080/exchange');
+        //xhr.setRequestHeader('Content-Type', 'multipart/form-data');
+        xhr.send(formdata);
+        xhr.onreadystatechange = function(){
+        if(xhr.readyState != 4) return;
+        if(xhr.status != 200){
+            alert("Status: " + xhr.status);
+        }else{
+            alert(xhr.responseText);
+        }
+    };
+        return false;
+      }
+  </script>
+</html>

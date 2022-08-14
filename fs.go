@@ -7,9 +7,15 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"html/template"
 )
 
-type Router struct{}
+type(
+	TemplateData struct{
+	  Title string
+	}
+	Router struct{}
+)
 
 // Структура для хранения данных о загруженном файле
 type dirFiles struct {
@@ -18,64 +24,77 @@ type dirFiles struct {
 	IsDir           bool
 }
 
-const(
-  ip string = "192.168.101.87"
-  uploadPath = "upload"
+const (
+	ip         string = "192.168.101.87"
+	uploadPath        = "upload"
+)
+
+var(
+	templ, _ = template.ParseFiles("./templates/template.html")
+	srv = &http.Server{
+		Addr:         ":8080",
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+	}
 )
 
 // Функция находит файлы и папки в директории; возвращает: []dirFiles{}, error
-func listFtpFiles(directory string) ([]dirFiles,error) {
+func listFtpFiles(directory string) ([]dirFiles, error) {
 	files, err := os.ReadDir(directory)
 	if err != nil {
 		return []dirFiles{}, err
 	}
-	thisDirFiles:=make([]dirFiles, len(files))
+	thisDirFiles := make([]dirFiles, len(files))
 	for i, file := range files {
 		if !file.IsDir() {
-			entity, err := checkFileInfo(file.Name())
+			entity, err := checkFileInfo(directory + "/" +file.Name())
 			if err != nil {
 				return []dirFiles{}, err
-			} else{
-        thisDirFiles[i]=entity
-      }
+			} else {
+				thisDirFiles[i] = entity
+			}
 		} else {
-			thisDirFiles[i]=dirFiles{file.Name(),"Папка", 0, true,}
+			thisDirFiles[i] = dirFiles{file.Name(), "Папка", 0, true}
 		}
 	}
-	return thisDirFiles,nil
+	return thisDirFiles, nil
 }
 
 // Функция получает информацию о файле; взвращает: структуру типа dirFiles{}, error
-func checkFileInfo(directory string) (dirFiles, error) {
-	file, err := os.Open(directory)
+func checkFileInfo(fileName string) (dirFiles, error) {
+	file, err := os.Open(fileName)
 	if err != nil {
 		return dirFiles{}, err
 	}
 	defer file.Close()
-  fi, err:=file.Stat()
-  if err!=nil{
-    return dirFiles{}, err
-  }
+	fi, err := file.Stat()
+	if err != nil {
+		return dirFiles{}, err
+	}
 	fileEntity := dirFiles{fi.Name(), filepath.Ext(fi.Name()), fi.Size(), false}
 	return fileEntity, nil
 }
 
-//Маршрутизатор для http-запросов
+// Маршрутизатор для http-запросов
 func (e Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/":
-		w.Write([]byte("Главная"))
-	case "/filter":
-		w.Write([]byte("Поиск"))
-	case "/ftp":
 		fileStack, err := listFtpFiles(uploadPath)
 		if err != nil {
 			log.Println(err)
 			return
 		}
-    log.Println(fileStack)
+		td:=TemplateData{Title: "Главная",}
+		templ.Execute(w, td)
+		log.Println(fileStack)
 	case "/upload":
-		file, header, err := r.FormFile("fileupload")
+		td:=TemplateData{Title: "Главная",}
+		templ.Execute(w, td)
+	case "/exchange":
+		w.Header().Add("Access-Control-Allow-Headers","Content-Type")
+    w.Header().Add("Access-Control-Allow-Origin","*")
+	  w.Header().Set("Content-type","multipart/form-data")
+		file, header, err := r.FormFile("fileUpload")
 		if err != nil {
 			w.Write([]byte("Ошибка загрузки файла"))
 			return
@@ -102,11 +121,6 @@ func (e Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.Handle("/", Router{})
 
-	srv := &http.Server{
-		Addr:         ":8011",
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 5 * time.Second,
-	}
 	srv.ListenAndServe()
 
 }

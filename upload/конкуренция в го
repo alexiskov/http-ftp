@@ -1,0 +1,4 @@
+Mutex - симафор,\
+atomic - захват значений
+waitgroup
+sync.
