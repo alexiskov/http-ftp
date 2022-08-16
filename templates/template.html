@@ -1,3 +1,4 @@
+{{define "main"}}
 <!DOCTYPE html>
 <html lang=ru dir="ltr">
   <head>
@@ -14,26 +15,75 @@
       color: white;
       box-shadow:0 0 2px 1px rgb(0,0,0,0.4);
     }
+    #fileUpload{
+      margin: 0.5em;
+      padding: 1em;
+      border: 1px solid silver;
+    }
+    #fileUpload>input[type="submit"]{
+      padding:5px;
+      padding-left: 0.5em;
+      padding-right: 0.5em;
+    }
+    .dataField>table{
+      width:100%;
+      border-spacing:0;
+    }
+    .dataField>table tr:first-child{
+      background-color: slateblue;
+    }
+    .dataField>table tr:first-child>td{
+      padding:0.2em;
+      color:white;
+    }
+    .dataField>table td{
+      border-left: 1px solid slateblue;
+      border-bottom: 1px solid slateblue;
+      padding:0.1em;
+      cursor: pointer;
+    }
+    .dataField>table a{
+      text-decoration: none;
+      color: inherit;
+    }
+    .dataField>table>tbody>tr{
+      color: #343434;
+    }
+    .dataField>table>tbody>tr:hover{
+      color:orangered;
+    }
   </style>
   <body>
     <div class="topMenu">
-      Главное меню
+      <b> FTP </b>
     </div>
     <form  id="fileUpload"  enctype="multipart/form-data" method="post">
+      <label>Загрузить файл: </label>
       <input type="file" name="fileUpload">
-      <input type="submit" name="sent" value="sent">
+      <input type="submit" name="sent" value="загрузить">
     </form>
+    <table>
+      <tr>
+        <td class="tableTitle" src="Name">Файл</td>
+        <td class="tableTitle" src="Ext">Расширение</td>
+        <td class="tableTitle" src="Type">Тип</td>
+        <td class="tableTitle" src="Size">Размер(byte)</td>
+      </tr>
+    <div class="dataField">
+    {{template "fileData" .}}
+    </div>
   </body>
   <script type="text/javascript">
+      let queryAdress = "192.168.101.87";
       let formUpload = document.getElementById("fileUpload")
       formUpload.elements.sent.onclick = function(){
         let fileData = formUpload.elements.fileUpload.files[0];
         console.log(fileData);
         let formdata = new FormData();
         formdata.append('fileUpload', fileData);
+
         var xhr = new XMLHttpRequest();
-        xhr.open('POST', 'http://192.168.0.104:8080/exchange');
-        //xhr.setRequestHeader('Content-Type', 'multipart/form-data');
+        xhr.open('POST', "http://"+queryAdress+":8080/exchange");
         xhr.send(formdata);
         xhr.onreadystatechange = function(){
         if(xhr.readyState != 4) return;
@@ -41,9 +91,50 @@
             alert("Status: " + xhr.status);
         }else{
             alert(xhr.responseText);
+            window.location = window.location.href;
         }
     };
         return false;
       }
+//-------------------------------------------------------------------------------
+      let dataField = document.querySelector(".dataField");
+      let tableTitle = document.querySelectorAll(".tableTitle");
+      let listFilter = {FilterVal:""};
+
+      function filter(){
+        let filterKey = event.target.attributes.src.value;
+
+        if(listFilter.FilterKey!= filterKey){
+          listFilter.FilterKey = filterKey;
+          listFilter.FilterVal="";
+        }
+        if(listFilter.FilterVal=="desk"){
+          listFilter.FilterVal="";
+        }
+        if(listFilter.FilterVal=="ask"){
+          listFilter.FilterVal="desk";
+        }
+        if(listFilter.FilterVal==""){
+          listFilter.FilterVal="ask";
+        }
+
+        let xhr = new XMLHttpRequest();
+        xhr.open('GET', "http://"+queryAdress+":8080/?filter=" + listFilter.FilterKey + "&pattrn=" + listFilter.FilterVal);
+        xhr.send();
+        xhr.onreadystatechange = function(){
+          if(xhr.readyState != 4) return;
+          if(xhr.status != 200){
+              alert("Status: " + xhr.status);
+          }else{
+              dataField.innerHTML = xhr.responseText;
+          }
+        }
+      }
+
+      for(let i=0; i<tableTitle.length; i++){
+        tableTitle[i].addEventListener('click', filter,false);
+      }
+
   </script>
 </html>
+{{end}}

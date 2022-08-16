@@ -1,1 +1,15 @@
-<h3>Body</h3>
+{{define "fileData"}}
+
+  {{ range .Files }}
+    <tr>
+      <td><a href="{{.Adress}}">{{.Name}}</a></td>
+      <td>{{.Extension}}</td>
+      {{if eq .IsDir false}}
+      <td>Файл данных</td>
+      {{end}}
+      <td>{{.Size}}</td>
+    </tr>
+
+  {{ end }}
+  </table>
+{{end}}
