@@ -16,19 +16,34 @@
   #topmenu>input{
     float:right;
   }
+  #addFile{
+    margin:1em;
+    padding:1em;
+    display:inline-block;;
+    box-shadow:0 0 3px 1px rgb(0,0,0,0.3);
+  }
   #content{
     margin:1em;
-    border:1px solid grey;
     padding:0.5em;
   }
-  #content>li{
+  #content>ul>li{
     list-style-type: none;
     display: inline-block;
-    border:1px solid gainsboro;
     padding: 0.2em;
+    padding-bottom: 0.4em;
     width:8em;
-    height:8em;
     margin:0.3em;
+    text-align: center;
+    overflow: hidden;
+  }
+  #content>ul>li>img{
+    display:block;
+    margin: auto;
+    height: 3.5em;
+  }
+  #content>ul>li>a{
+    font-size:0.7em;
+    text-decoration: none;
   }
   </style>
   <body>
@@ -36,28 +51,58 @@
       <b><i>FTP</i></b>
       <input type="text" placeholder="search">
     </div>
-    <ul id="content">
+    <div id="addFile">
+      <label>Загрузить файл: </label><input type="file">
+    </div>
+    <div id="content">
 
-    </ul>
+    </div>
   </body>
   <script>
-let arrDat = [];
 let content = document.getElementById('content');
-  content.innerHtml="";
-  fetch("http://192.168.101.87:8011/?data=json")
+function getData(place, query){
+  place.innerText='';
+  let listPlace = document.createElement('ul');
+  place.append(listPlace);
+  fetch(query)
     .then(response => response.json())
     .then((data)=>{
       for (let i=0; i<data.length; i++){
         let file = document.createElement("li");
         let fileImg = document.createElement("img");
+        fileImg.setAttribute('src',"http://192.168.101.87:5460/icons/doc.png");
         let fileAhref = document.createElement("a");
-        content.append(file);
+        listPlace.append(file);
         fileAhref.setAttribute('href',data[i].url);
+        file.append(fileImg);
         file.append(fileAhref);
         fileAhref.innerText = data[i].name;
       }
     })
+}
 
+getData(content, "http://192.168.101.87:8011/?data=json");
 
+//--------------------------------------------------------------------UploadFile
+let fileupload = document.getElementById("addFile");
+function fupload(){
+  let file = event.target.files[0];
+  const url = "http://192.168.101.87:8011/upload";
+  const formData = new FormData();
+  formData.append('fileUpload', file);
+  fetch(url,{
+    method: 'POST',
+    body: formData
+  })
+  .then(()=>{
+    getData(content, "http://192.168.101.87:8011/?data=json");
+  })
+  .catch(()=>{
+    alert(`Ошибка загрузки файла`);
+  })
+
+}
+
+fileupload.querySelector('input[type=file]').addEventListener('change',fupload,false);
   </script>
 </html>
