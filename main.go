@@ -40,8 +40,20 @@ var (
 func (R Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/":
-		if r.Method == http.MethodGet && r.FormValue("data") == "json" {
+		if r.Method == http.MethodGet && (r.FormValue("data") == "json" || r.FormValue("find") == "") {
 			bufer, err := json.Marshal(fileCashe)
+			if err != nil {
+				log.Println(err)
+			} else {
+				w.Write(bufer)
+			}
+		} else if r.Method == http.MethodGet && r.FormValue("find") != "" {
+			searchRes, err := fileSearch(fileCashe, r.FormValue("find"))
+			if err != nil {
+				log.Println(err)
+				w.Write([]byte("Ошибка поиска"))
+			}
+			bufer, err := json.Marshal(searchRes)
 			if err != nil {
 				log.Println(err)
 			} else {
@@ -70,7 +82,7 @@ func (R Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("Ошибка обработк файла"))
 			return
 		}
-    findInCashe(data, &header.Filename, &fileCashe) //--Чекнем в кеш...
+		findInCashe(data, &header.Filename, &fileCashe) //--Чекнем в кеш...
 		filepath := FILEDIR + "/" + header.Filename
 		err = ioutil.WriteFile(filepath, data, 0777)
 		if err != nil {
@@ -78,22 +90,36 @@ func (R Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-
 		w.Write([]byte("Файл загружен на сервер\n"))
 	default:
 		//...
 	}
 }
 
+// Поиск файлов в кеше по фрагментам/имени
+func fileSearch(fileList []FileEntity, pattern string) ([]FileEntity, error) {
+	var fileBufer []FileEntity
+	for _, fi := range fileList {
+		matched, err := regexp.MatchString(pattern, fi.Name)
+		if err != nil {
+			return []FileEntity{}, err
+		}
+		if matched {
+			fileBufer = append(fileBufer, FileEntity{fi.Name, fi.Extension, fi.Addres, fi.Size, fi.IsDir})
+		}
+	}
+	return fileBufer, nil
+}
+
 // Добавляем файлы в кеш, проверка на наличие дубликатов файлов имен...
-func findInCashe(data []byte, fileName *string, fileCashe *[]FileEntity){
+func findInCashe(data []byte, fileName *string, fileCashe *[]FileEntity) {
 	pattern, _ := regexp.Compile(`\.\w+$`)
-	match:= pattern.FindAllStringSubmatch(*fileName, 1)
-  for _,file:=range *fileCashe{
-    if file.Name == *fileName{
-      *fileName=time.Now().Format(time.RFC1123) + *fileName
-    }
-  }
+	match := pattern.FindAllStringSubmatch(*fileName, 1)
+	for _, file := range *fileCashe {
+		if file.Name == *fileName {
+			*fileName = time.Now().Format(time.RFC1123) + *fileName
+		}
+	}
 	*fileCashe = append(*fileCashe, FileEntity{*fileName, match[0][0], "http://" + ADDRES + FTPPORT + "/" + *fileName, int64(len(data)), false})
 }
 
